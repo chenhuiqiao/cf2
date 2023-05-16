@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>算式消除游戏</title>
+    <style>
+
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            background-color: #FFFFFF;
+        }
+        #gameBoard {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            grid-template-rows: repeat(4, 1fr);
+            grid-gap: 5px;
+            width: 200px;
+            margin: 0 auto;
+            border: 1px solid #BDC3C7;
+            border-radius: 5px;
+            padding: 5px;
+            background-color: #BDC3C7;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
+        }
+        .block {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            width: 100%;
+            height: 100%;
+            border: 1px solid #BDC3C7;
+            background-color: #A9DFBF;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+            border-radius: 5px;
+            box-shadow: 0 0 5px rgba(0, 0, 0, 0.3);
+            transition: box-shadow 0.3s ease;
+        }
+        .block:hover {
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+        }
+        #timer {
+            font-size: 24px;
+            font-weight: bold;
+            color: #333;
+            margin-top: 20px;
+            margin-bottom: 20px;
+        }
+
+        h1 {
+            color: #A9DFBF;
+        }
+
+#resetButton {
+    font-size: 16px;
+    padding: 8px 12px;
+    background-color: #2ECC71;
+    color: #FFFFFF;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    display: none;
+    margin: 20px auto 0;
+    max-width: 150px;
+}
+
+
+    </style>
+</head>
+<body>
+    <h1>算式消除游戏</h1>
+    <div id="gameBoard"></div>
+    <p>倒计时: <span id="timer">300</span> 秒</p>
+    <button id="resetButton">再来一局</button>
+    <script>
+        const gameBoard = document.getElementById("gameBoard");
+        const timer = document.getElementById("timer");
+        const resetButton = document.getElementById("resetButton");
+
+function generateUniqueExpression(result, usedExpressions, operator) {
+    let expression;
+
+    while (true) {
+        let randomNum1 = Math.floor(Math.random() * 20) + 1;
+        let randomNum2 = operator === '+' ? result - randomNum1 : randomNum1 - result;
+        
+        if (randomNum2 < 1 || randomNum2 > 20) {
+            continue;
+        }
+
+        let candidate1 = `${randomNum1}${operator}${randomNum2}`;
+        let candidate2 = `${randomNum2}${operator}${randomNum1}`;
+        let evalResult = eval(candidate1);
+
+        if (Number.isInteger(evalResult) && evalResult === result && !usedExpressions.has(candidate1) && !usedExpressions.has(candidate2)) {
+            expression = candidate1;
+            usedExpressions.add(candidate1);
+            usedExpressions.add(candidate2);
+            break;
+        }
+    }
+
+    return expression;
+}
+
+
+
+function generateExpressions() {
+    const expressions = [];
+    const usedExpressions = new Set();
+    const additionResults = new Set();
+    const subtractionResults = new Set();
+
+    while (additionResults.size < 8) {
+        let randomNum1 = Math.floor(Math.random() * 20) + 1;
+        let randomNum2 = Math.floor(Math.random() * 20) + 1;
+        let additionResult = randomNum1 + randomNum2;
+
+        if (additionResult > 0 && additionResult <= 20 && !additionResults.has(additionResult)) {
+            additionResults.add(additionResult);
+            let expression1 = generateUniqueExpression(additionResult, usedExpressions, '+');
+            let expression2 = generateUniqueExpression(additionResult, usedExpressions, '+');
+            expressions.push(expression1, expression2);
+        }
+    }
+
+    while (subtractionResults.size < 8) {
+        let randomNum1 = Math.floor(Math.random() * 20) + 1;
+        let randomNum2 = Math.floor(Math.random() * 20) + 1;
+        let subtractionResult = Math.abs(randomNum1 - randomNum2);
+
+        if (subtractionResult > 0 && subtractionResult <= 20 && !subtractionResults.has(subtractionResult)) {
+            subtractionResults.add(subtractionResult);
+            let expression1 = generateUniqueExpression(subtractionResult, usedExpressions, '-');
+            let expression2 = generateUniqueExpression(subtractionResult, usedExpressions, '-');
+            expressions.push(expression1, expression2);
+        }
+    }
+
+    return shuffle(expressions);
+}
+
+
+
+        let shuffledExpressions = shuffle(generateExpressions());
+        let firstClick = null;
+
+        function shuffle(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+            return array;
+        }
+
+        function createBlocks() {
+            for (let i = 0; i < 32; i++) {
+                const block = document.createElement("div");
+                block.className = "block";
+                block.dataset.index = i;
+                block.innerText = shuffledExpressions[i];
+                block.addEventListener("click", onBlockClick);
+                gameBoard.appendChild(block);
+            }
+        }
+        function onBlockClick(event) {
+            const index = parseInt(event.target.dataset.index);
+            const expression = event.target.innerText;
+
+        if (firstClick === null) {
+            firstClick = { index, expression };
+            event.target.style.backgroundColor = "orange";
+        } else {
+            if (eval(firstClick.expression) === eval(expression) && firstClick.index !== index) {
+                gameBoard.children[firstClick.index].style.backgroundColor = "transparent";
+                gameBoard.children[firstClick.index].style.cursor = "default";
+                gameBoard.children[firstClick.index].removeEventListener("click", onBlockClick);
+
+                gameBoard.children[index].style.backgroundColor = "transparent";
+                gameBoard.children[index].style.cursor = "default";
+                gameBoard.children[index].removeEventListener("click", onBlockClick);
+            } else {
+                gameBoard.children[firstClick.index].style.backgroundColor = "lightblue";
+            }
+            firstClick = null;
+        }
+
+            if (isGameOver()) {
+                clearInterval(timerId);
+                resetButton.style.display = 'block';
+            }
+        }
+
+        function isGameOver() {
+            const blocks = Array.from(gameBoard.children);
+            return blocks.every(block => block.style.backgroundColor === "transparent");
+        }
+
+        function resetGame() {
+            gameBoard.innerHTML = "";
+            shuffledExpressions = shuffle(generateExpressions());
+            firstClick = null;
+            createBlocks();
+            startTimer();
+        }
+
+        function startTimer() {
+            let timeLeft = 300;
+            timer.innerText = timeLeft;
+
+            timerId = setInterval(() => {
+            timeLeft -= 1;
+            timer.innerText = timeLeft;
+
+            if (timeLeft <= 0) {
+                clearInterval(timerId);
+                alert("时间到！游戏失败！");
+                resetGame();
+            }
+        }, 1000);
+    }
+
+        function checkGameOver() {
+            if (isGameOver()) {
+                clearInterval(timerId);
+                resetButton.style.display = 'block';
+            }
+        }
+
+        createBlocks();
+        startTimer();
+
+resetButton.addEventListener("click", () => {
+    location.reload();
+});
+
+
+
+</script>
+</body>
+</html>
+
